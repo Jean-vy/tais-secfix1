@@ -15,7 +15,7 @@ on:
         description: "Primera repetición (para continuar otro día)"
         default: "0"
       model:
-        description: "Modelo del LLM (vacío = variable LLM_MODEL o llama-3.3-70b-versatile)"
+        description: "Modelo del LLM (vacío = variable LLM_MODEL o openai/gpt-oss-120b)"
         default: ""
 
 permissions:

@@ -21,7 +21,7 @@ from secfix.validate import Validator
 def common_args(p):
     p.add_argument("--rules", default=os.environ.get("SECFIX_RULES", "rules/"))
     p.add_argument("--mode", choices=["full", "sast-only"], default="full")
-    p.add_argument("--model", default=None, help="Modelo del LLM (por defecto SECFIX_MODEL o llama-3.3-70b-versatile)")
+    p.add_argument("--model", default=None, help="Modelo del LLM (por defecto SECFIX_MODEL o openai/gpt-oss-120b)")
     p.add_argument("--test-cmd", default=None, help="Comando de pruebas para V3 (p. ej. 'pytest -q lab/tests')")
     p.add_argument("--exploit-cmd", default=None, help="Comando de pruebas de explotación para V4")
     p.add_argument("--metrics-out", default="secfix-out/metrics.json")

@@ -4,7 +4,7 @@ GitHub Models se retiró el 30/07/2026; por defecto se usa Groq (plan gratuito).
 Configuración por variables de entorno:
   SECFIX_LLM_TOKEN     API key del proveedor (obligatoria)
   SECFIX_LLM_ENDPOINT  URL de /chat/completions (por defecto, Groq)
-  SECFIX_MODEL         modelo (por defecto, llama-3.3-70b-versatile)
+  SECFIX_MODEL         modelo (por defecto, openai/gpt-oss-120b)
 Sirve cualquier proveedor compatible con OpenAI (Gemini, OpenRouter, OpenAI...).
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ import time
 import requests
 
 DEFAULT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 
 class LLMError(RuntimeError):

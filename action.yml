@@ -20,7 +20,7 @@ inputs:
     description: URL /chat/completions compatible con OpenAI (vacío = Groq)
     default: ""
   model:
-    description: Modelo del LLM (vacío = llama-3.3-70b-versatile)
+    description: Modelo del LLM (vacío = openai/gpt-oss-120b)
     default: ""
   test-cmd:
     description: Comando de pruebas para V3 (se ejecuta sobre una copia con el parche aplicado)
