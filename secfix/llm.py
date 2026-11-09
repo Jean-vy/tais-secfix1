@@ -64,13 +64,24 @@ class LLMClient:
                 last_err = f"error de red: {e}"
             else:
                 if r.status_code == 200:
-                    data = r.json()
+                    try:
+                        data = r.json()
+                        content = data["choices"][0]["message"]["content"]
+                    except (ValueError, KeyError, IndexError, TypeError):
+                        # 200 con cuerpo vacío o inesperado: se reintenta y se informa el cuerpo.
+                        last_err = (f"HTTP 200 con respuesta inválida "
+                                    f"(content-type={r.headers.get('content-type')!r}): {r.text[:300]!r}")
+                        print(f"  [secfix] LLM: {last_err}", flush=True)
+                        time.sleep(delay)
+                        delay = min(delay * 2, 120)
+                        continue
                     self.calls += 1
                     usage = data.get("usage") or {}
                     self.prompt_tokens += usage.get("prompt_tokens", 0)
                     self.completion_tokens += usage.get("completion_tokens", 0)
-                    return parse_json(data["choices"][0]["message"]["content"])
+                    return parse_json(content)
                 last_err = f"HTTP {r.status_code}: {r.text[:300]}"
+                print(f"  [secfix] LLM: {last_err}", flush=True)
                 if r.status_code not in (429, 500, 502, 503, 504):
                     raise LLMError(last_err)
                 retry_after = r.headers.get("retry-after")
