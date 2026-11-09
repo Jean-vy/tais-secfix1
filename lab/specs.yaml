@@ -6,3 +6,12 @@ home:
     exploit: {type: xss, method: GET, path: /, param: name, in: query}
   - functional: {method: GET, path: /users, query: {name: alice}, expect_contains: alice@example.com}
     exploit: {type: sqli, method: GET, path: /users, param: name, in: query}
+perfil:
+  - functional: {method: GET, path: /perfil/buscar, query: {nombre: alice}, expect_contains: alice@example.com}
+    exploit: {type: sqli, method: GET, path: /perfil/buscar, param: nombre, in: query}
+  - functional: {method: GET, path: /perfil/saludo, query: {nombre: Ana}, expect_contains: Ana}
+    exploit: {type: xss, method: GET, path: /perfil/saludo, param: nombre, in: query}
+  - functional: {method: POST, path: /perfil/foto, upload: foto}
+    exploit: {type: upload, method: POST, path: /perfil/foto, param: foto}
+  - functional: {method: GET, path: /perfil/1/resumen, query: {pagina: "1"}, expect_contains: alice@example.com}
+    exploit: {type: sqli, method: GET, path: /perfil/1/resumen, param: pagina, in: query}
