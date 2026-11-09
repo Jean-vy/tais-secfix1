@@ -7,7 +7,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
 
 concurrency:
   group: secfix-${{ github.event.pull_request.number }}
@@ -26,3 +25,7 @@ jobs:
         with:
           rules: rules/
           test-cmd: "python -m pytest -q lab/tests"
+          # Secret obligatorio; endpoint y modelo, opcionales (variables del repo).
+          llm-token: ${{ secrets.LLM_API_KEY }}
+          llm-endpoint: ${{ vars.LLM_ENDPOINT }}
+          model: ${{ vars.LLM_MODEL }}
