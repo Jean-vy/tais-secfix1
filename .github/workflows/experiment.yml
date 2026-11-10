@@ -36,6 +36,7 @@ jobs:
           SECFIX_LLM_TOKEN: ${{ secrets.LLM_API_KEY }}
           SECFIX_LLM_ENDPOINT: ${{ vars.LLM_ENDPOINT }}
           SECFIX_MODEL: ${{ inputs.model || vars.LLM_MODEL }}
+          SECFIX_MIN_INTERVAL: "20"
         run: |
           python experiment/run_experiment.py --configs "${{ inputs.configs }}" \
             --reps "${{ inputs.reps }}" --rep-offset "${{ inputs.rep_offset }}" \
