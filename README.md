@@ -4,7 +4,7 @@ Prototipo del Hito 2 (TAIS, UNSA). En cada pull request, `secfix`:
 
 1. calcula las líneas cambiadas del PR;
 2. ejecuta **Semgrep CE** con reglas propias para **CWE-89 (SQLi)**, **CWE-79 (XSS)** y **CWE-434 (carga insegura de archivos)**;
-3. pide a un **LLM** (GitHub Models, gratis con el `GITHUB_TOKEN`) que clasifique cada hallazgo como verdadero o falso positivo;
+3. pide a un **LLM** (cualquier API compatible con OpenAI; por defecto Groq, que tiene plan gratuito) que clasifique cada hallazgo como verdadero o falso positivo;
 4. para los verdaderos positivos, pide al LLM la función corregida;
 5. **valida** cada parche de forma determinista:
    - **V1** compila;
@@ -26,7 +26,7 @@ secfix/                    motor en Python
   diff.py                  líneas cambiadas y líneas comentables del PR
   sast.py                  ejecución y normalización de Semgrep
   context.py               recorte de contexto mínimo y aplicación de parches
-  llm.py                   cliente GitHub Models (compatible con OpenAI), con control de cuota
+  llm.py                   cliente LLM compatible con OpenAI, con control de cuota
   triage.py  repair.py     etapas LLM; prompts en secfix/prompts/
   validate.py              validación V1–V4
   pipeline.py              orquestación
@@ -47,7 +47,10 @@ tests/                     pruebas del motor con LLM simulado
    - Marca *Require a pull request before merging*.
    - Marca *Require status checks to pass*.
    - Agrega el check **`secfix`**. Aparece en la lista después de la primera ejecución.
-4. No hace falta ninguna API key: el workflow pide `permissions: models: read` y usa el `GITHUB_TOKEN`.
+4. **API key del LLM.** GitHub Models se retiró el 30/07/2026, así que se usa cualquier API compatible con OpenAI. Por defecto es **Groq**, que tiene plan gratuito:
+   - Crea una key en <https://console.groq.com/keys>.
+   - Guárdala en **Settings → Secrets and variables → Actions → New repository secret** con el nombre `LLM_API_KEY`.
+   - Para usar otro proveedor, crea en la pestaña *Variables* `LLM_ENDPOINT` (la URL de `/chat/completions`) y `LLM_MODEL`. Por ejemplo, para Gemini: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` con `gemini-2.5-flash`.
 
 ## PR de demostración (para las capturas del informe)
 
@@ -75,8 +78,8 @@ python -m pytest -q tests lab/tests            # motor (LLM simulado) + laborato
 # Solo Semgrep (sin LLM):
 python -m secfix.cli scan --mode sast-only demo/perfil.py
 
-# Semgrep + LLM: necesitas un token personal con permiso "models:read"
-export GITHUB_TOKEN=github_pat_...
+# Semgrep + LLM: necesitas la API key del proveedor (por defecto, Groq)
+export SECFIX_LLM_TOKEN=gsk_...
 python -m secfix.cli scan --test-cmd "python -m pytest -q lab/tests" lab/routes/perfil.py
 ```
 
@@ -96,17 +99,17 @@ python -m secfix.cli scan --test-cmd "python -m pytest -q lab/tests" lab/routes/
 
   La reparación siempre se mide aparte: se aplican los parches aceptados y se vuelve a lanzar el ataque.
 
-**Opción A — en GitHub (sin token personal):** ve a *Actions → experiment → Run workflow*, con `configs = C0,C1` y `reps = 1`. Descarga el artefacto `resultados-experimento-r0`. Para la segunda repetición usa `rep_offset = 1`, y así sucesivamente. Luego copia todos los `runs_r*.jsonl` a `experiment/results/` y ejecuta `python experiment/analyze.py`.
+**Opción A — en GitHub (usa el secret `LLM_API_KEY`):** ve a *Actions → experiment → Run workflow*, con `configs = C0,C1` y `reps = 1`. Descarga el artefacto `resultados-experimento-r0`. Para la segunda repetición usa `rep_offset = 1`, y así sucesivamente. Luego copia todos los `runs_r*.jsonl` a `experiment/results/` y ejecuta `python experiment/analyze.py`.
 
 **Opción B — local:**
 
 ```bash
-export GITHUB_TOKEN=github_pat_...        # permiso models:read
+export SECFIX_LLM_TOKEN=gsk_...           # API key del LLM
 python experiment/run_experiment.py --configs C0,C1 --reps 3
 python experiment/analyze.py              # genera summary.md, summary.csv y metricas.png
 ```
 
-**Cuota gratuita de GitHub Models** (modelos low tier como `gpt-4o-mini`): unas 15 solicitudes por minuto y 150 por día. Una repetición de C1 usa unas 50–60 llamadas. El cliente espera 4,5 s entre llamadas y reintenta los 429. Si se agota la cuota diaria, el runner se detiene: vuelve a ejecutarlo al día siguiente y continúa donde se quedó. También pueden repartir las repeticiones entre las cuentas de los integrantes, cada una con su token y su `--rep-offset`.
+**Cuota gratuita:** cada proveedor tiene límites propios por minuto y por día; revísalos en su consola. Una repetición de C1 usa unas 50–60 llamadas. El cliente espera 4,5 s entre llamadas y reintenta los 429. Si se agota la cuota diaria, el runner se detiene: vuelve a ejecutarlo al día siguiente y continúa donde se quedó. También pueden repartir las repeticiones entre las cuentas de los integrantes, cada una con su token y su `--rep-offset`.
 
 **Línea base ya medida (C0, determinista):** precisión 62,5 %, recall 100 %, F1 76,9 %, 9 falsos positivos y 0 % de reparación.
 

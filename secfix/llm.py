@@ -1,7 +1,11 @@
-"""Cliente LLM compatible con la API de chat de OpenAI (por defecto, GitHub Models).
+"""Cliente LLM compatible con la API de chat de OpenAI.
 
-En GitHub Actions basta el permiso `models: read` y el GITHUB_TOKEN del job.
-En local, exporta un token personal con permiso `models:read` en GITHUB_TOKEN.
+GitHub Models se retiró el 30/07/2026; por defecto se usa Groq (plan gratuito).
+Configuración por variables de entorno:
+  SECFIX_LLM_TOKEN     API key del proveedor (obligatoria)
+  SECFIX_LLM_ENDPOINT  URL de /chat/completions (por defecto, Groq)
+  SECFIX_MODEL         modelo (por defecto, openai/gpt-oss-120b)
+Sirve cualquier proveedor compatible con OpenAI (Gemini, OpenRouter, OpenAI...).
 """
 from __future__ import annotations
 
@@ -12,8 +16,8 @@ import time
 
 import requests
 
-DEFAULT_ENDPOINT = "https://models.github.ai/inference/chat/completions"
-DEFAULT_MODEL = "openai/gpt-4o-mini"
+DEFAULT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 
 class LLMError(RuntimeError):
@@ -24,10 +28,11 @@ class LLMClient:
     def __init__(self, model: str | None = None, token: str | None = None,
                  endpoint: str | None = None, min_interval: float | None = None,
                  max_retries: int = 6, timeout: int = 120):
-        self.model = model or os.environ.get("SECFIX_MODEL", DEFAULT_MODEL)
-        self.token = token or os.environ.get("SECFIX_LLM_TOKEN") or os.environ.get("GITHUB_TOKEN")
-        self.endpoint = endpoint or os.environ.get("SECFIX_LLM_ENDPOINT", DEFAULT_ENDPOINT)
-        # Plan gratuito de GitHub Models (low tier): 15 solicitudes/minuto.
+        # `or` en vez del default de .get(): en Actions una variable sin definir llega como "".
+        self.model = model or os.environ.get("SECFIX_MODEL") or DEFAULT_MODEL
+        self.token = token or os.environ.get("SECFIX_LLM_TOKEN")
+        self.endpoint = endpoint or os.environ.get("SECFIX_LLM_ENDPOINT") or DEFAULT_ENDPOINT
+        # Margen para los planes gratuitos (~15 solicitudes/minuto).
         self.min_interval = float(min_interval if min_interval is not None
                                   else os.environ.get("SECFIX_MIN_INTERVAL", 4.5))
         self.max_retries = max_retries
@@ -45,7 +50,8 @@ class LLMClient:
 
     def chat_json(self, system: str, user: str) -> dict:
         if not self.token:
-            raise LLMError("Falta el token: define GITHUB_TOKEN (permiso models:read) o SECFIX_LLM_TOKEN.")
+            raise LLMError("Falta la API key del LLM: define SECFIX_LLM_TOKEN "
+                           "(en GitHub, el secret LLM_API_KEY del repositorio).")
         body = {
             "model": self.model,
             "temperature": 0,
@@ -68,13 +74,12 @@ class LLMClient:
                         data = r.json()
                         content = data["choices"][0]["message"]["content"]
                     except (ValueError, KeyError, IndexError, TypeError):
-                        # 200 con cuerpo vacío o inesperado: se reintenta y se informa el cuerpo.
-                        last_err = (f"HTTP 200 con respuesta inválida "
-                                    f"(content-type={r.headers.get('content-type')!r}): {r.text[:300]!r}")
-                        print(f"  [secfix] LLM: {last_err}", flush=True)
-                        time.sleep(delay)
-                        delay = min(delay * 2, 120)
-                        continue
+                        # Un 200 que no es respuesta de chat indica un endpoint equivocado o
+                        # retirado (GitHub Models responde "OK"): reintentar no sirve.
+                        raise LLMError(
+                            f"{self.endpoint} respondió 200 pero no con una respuesta de chat "
+                            f"(content-type={r.headers.get('content-type')!r}): {r.text[:300]!r}. "
+                            "Revisa SECFIX_LLM_ENDPOINT.")
                     self.calls += 1
                     usage = data.get("usage") or {}
                     self.prompt_tokens += usage.get("prompt_tokens", 0)

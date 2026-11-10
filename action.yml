@@ -1,7 +1,7 @@
 name: "secfix: SAST + LLM para pull requests"
 description: >-
   Detecta SQLi, XSS y carga insegura de archivos con Semgrep, filtra falsos
-  positivos con un LLM (GitHub Models), genera parches, los valida (compila,
+  positivos con un LLM (API compatible con OpenAI), genera parches, los valida (compila,
   re-escaneo, tests y exploit) y los publica como sugerencias en el PR.
 branding:
   icon: shield
@@ -13,9 +13,15 @@ inputs:
   mode:
     description: "full (Semgrep + LLM) o sast-only (solo Semgrep)"
     default: full
+  llm-token:
+    description: API key del proveedor LLM (p. ej. secrets.LLM_API_KEY). Obligatoria en modo full.
+    default: ""
+  llm-endpoint:
+    description: URL /chat/completions compatible con OpenAI (vacío = Groq)
+    default: ""
   model:
-    description: Modelo de GitHub Models
-    default: openai/gpt-4o-mini
+    description: Modelo del LLM (vacío = openai/gpt-oss-120b)
+    default: ""
   test-cmd:
     description: Comando de pruebas para V3 (se ejecuta sobre una copia con el parche aplicado)
     default: ""
@@ -26,7 +32,7 @@ inputs:
     description: Falla el check si quedan vulnerabilidades confirmadas
     default: "true"
   github-token:
-    description: Token para la API de GitHub y GitHub Models (necesita models:read y pull-requests:write)
+    description: Token para la API de GitHub (necesita pull-requests:write)
     default: ${{ github.token }}
 runs:
   using: composite
@@ -43,6 +49,8 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         PYTHONPATH: ${{ github.action_path }}
         SECFIX_MODEL: ${{ inputs.model }}
+        SECFIX_LLM_TOKEN: ${{ inputs.llm-token }}
+        SECFIX_LLM_ENDPOINT: ${{ inputs.llm-endpoint }}
       run: |
         RULES="${{ inputs.rules }}"
         [ -z "$RULES" ] && RULES="${{ github.action_path }}/rules"

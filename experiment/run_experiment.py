@@ -10,7 +10,7 @@ En todas, la reparación final se mide de forma independiente: se aplican los
 parches aceptados y se ejecuta el harness (funcional + explotación).
 
 Uso:
-  export GITHUB_TOKEN=...   # token con permiso models:read (o corre el workflow 'experiment')
+  export SECFIX_LLM_TOKEN=...   # API key del LLM (o corre el workflow 'experiment')
   python experiment/run_experiment.py --configs C0,C1 --reps 3
   python experiment/run_experiment.py --configs C0 --reps 1      # sin LLM, para probar
 
